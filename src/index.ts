@@ -9,12 +9,14 @@ class UP9Monitor {
     private tappingSourceId: string;
     private httpConnector: any;
     private ownState: any;
+    private isDebug: boolean;
 
     constructor(options) {
         this.env = options.up9Server;
         this.serviceName = options.serviceName;
         this.tappingSourceId = "nodejs-" + this.serviceName;
         this.httpConnector = new UP9HttpConnector(this.env, options.clientId, options.clientSecret);
+        this.isDebug = options.isDebug;
         setInterval(this.poll, POLL_INTERVAL_MS);
 
         this.requestLogger(require("http"), "http");
@@ -27,9 +29,9 @@ class UP9Monitor {
             const state = await this.httpConnector.getTappingState();
             this.ownState = state.filter(s => s.id == this.tappingSourceId)[0];
         } catch (e) {
-            console.error("error polling", e);
+            if (this.isDebug)
+                console.error("error polling", e);
         }
-
     }
 
     sendMessage = async (message) => {
@@ -38,7 +40,8 @@ class UP9Monitor {
                 await this.httpConnector.sendTrafficMessage(this.ownState.model, message);
             }
         } catch (e) {
-            console.error("error sending message to dumper", e, message, this.ownState);
+            if (this.isDebug)
+                console.error("error sending message to dumper", e, message, this.ownState);
         }
 
     }
