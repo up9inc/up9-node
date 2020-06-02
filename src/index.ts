@@ -48,11 +48,14 @@ class UP9Monitor {
         try {
             if (this.ownState?.shouldTap && this.ownState.model) {
                 message = this.replaceOverridenUrlsInMessage(message);
-                if (!this.isRequestUrlBlacklisted(message.request.request_url))
+                if (!this.isRequestUrlBlacklisted(message.request.request_url)) {
                     console.log('sending message');
                     await this.httpConnector.sendTrafficMessage(this.ownState.model, message);
-                else if (this.isDebug)
+                }
+                else  {
                     console.log(`ignoring blacklisted request to ${message.request.request_url}`);
+                }
+
             }
         } catch (e) {
             if (this.isDebug)
