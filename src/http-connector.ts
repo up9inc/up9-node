@@ -2,7 +2,16 @@ const axios = require("axios");
 const qs = require("querystring")
 
 
-class UP9HttpConnector {
+export class UP9HttpConnector {
+    private envUrl: any;
+    private trccUrl: string;
+    private trafficDumperUrl: string;
+    private clientId: any;
+    private tokenUrl: string;
+    private clientSecret: any;
+    private token: any;
+    private tokenExpiresAt: number;
+    
     constructor(envUrl, clientId, clientSecret) {
         this.envUrl = envUrl;
         this.trccUrl = "https://trcc." + envUrl;
@@ -58,6 +67,3 @@ class UP9HttpConnector {
         };
     }
 }
-
-
-module.exports = (envUrl, clientId, clientSecret) => new UP9HttpConnector(envUrl, clientId, clientSecret);

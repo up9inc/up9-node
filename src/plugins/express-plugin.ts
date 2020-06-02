@@ -1,4 +1,4 @@
-const utils = require("../utils");
+import {lowerCaseObjectKeys} from "../utils";
 
 function getResponseHeaders(responseHeaderString) {
     let headers = {};
@@ -23,7 +23,7 @@ const extractUp9MessageFromExpress = (req, res, responseContents, serviceName, s
     resHeaders['duration_ms'] = requestDurationMs.toString();
     return {
             request: {
-                headers: utils.lowerCaseObjectKeys(reqHeaders),
+                headers: lowerCaseObjectKeys(reqHeaders),
                 body: {
                     "truncated": false,
                     "as_bytes": req.body ? Buffer.from(JSON.stringify(req.body)).toString('base64') : ""
@@ -33,7 +33,7 @@ const extractUp9MessageFromExpress = (req, res, responseContents, serviceName, s
                 started_at_unix: startUnixTimestamp / 1000
             },
             response: {
-                headers: utils.lowerCaseObjectKeys(resHeaders),
+                headers: lowerCaseObjectKeys(resHeaders),
                 body: {
                     "truncated": false,
                     "as_bytes": responseContents
@@ -49,7 +49,7 @@ const sendToUp9 = (req, res, responseContents, onRequestCallback, serviceName, s
     onRequestCallback(message);
 }
 
-const getExpressMiddleware = (onRequestCallback, serviceName) => {
+export const getExpressMiddleware = (onRequestCallback, serviceName) => {
     return function (req, res, next) {
         const original_write = res.write;
         const original_end = res.end;
@@ -80,5 +80,3 @@ const getExpressMiddleware = (onRequestCallback, serviceName) => {
         next();
     }
 }
-
-module.exports = getExpressMiddleware;

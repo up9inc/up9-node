@@ -1,14 +1,20 @@
-const httpConnector = require("./http-connector");
-const expressConnector = require("./plugins/express-plugin");
-const utils = require("./utils");
+import {getExpressMiddleware} from "./plugins/express-plugin";
+import {lowerCaseObjectKeys} from "./utils";
+import {UP9HttpConnector} from "./http-connector";
 
 const POLL_INTERVAL_MS = 5000;
 class UP9Monitor {
+    private env: any;
+    private serviceName: any;
+    private tappingSourceId: string;
+    private httpConnector: any;
+    private ownState: any;
+
     constructor(options) {
         this.env = options.up9Server;
         this.serviceName = options.serviceName;
         this.tappingSourceId = "nodejs-" + this.serviceName;
-        this.httpConnector = httpConnector(this.env, options.clientId, options.clientSecret);
+        this.httpConnector = new UP9HttpConnector(this.env, options.clientId, options.clientSecret);
         setInterval(this.poll, POLL_INTERVAL_MS);
 
         this.requestLogger(require("http"), "http");
@@ -38,7 +44,7 @@ class UP9Monitor {
     }
 
     express = () => {
-        return expressConnector(this.sendMessage);
+        return getExpressMiddleware(this.sendMessage, this.serviceName);
     }
 
     requestLogger = (httpModule, protocol) => {
@@ -77,7 +83,7 @@ class UP9Monitor {
             const requestBody = request.body;
             const message = {
                 request: {
-                    headers: utils.lowerCaseObjectKeys(requestHeaders),
+                    headers: lowerCaseObjectKeys(requestHeaders),
                     body: {
                         "truncated": false,
                         "as_bytes": requestBody ? Buffer.from(requestBody).toString('base64') : ""
@@ -87,7 +93,7 @@ class UP9Monitor {
                     started_at_unix: startUnixTimestamp / 1000
                 },
                 response: {
-                    headers: utils.lowerCaseObjectKeys({...response.headers, ":status": response.statusCode.toString(), 'duration_ms': requestDuration.toString()}),
+                    headers: lowerCaseObjectKeys({...response.headers, ":status": response.statusCode.toString(), 'duration_ms': requestDuration.toString()}),
                     body: {
                         "truncated": false,
                         "as_bytes": responseBody ? Buffer.from(responseBody).toString('base64') : ""
@@ -96,7 +102,7 @@ class UP9Monitor {
                     hostname: this.serviceName
                 },
             };
-            //this.sendMessage(message);
+            this.sendMessage(message);
         }
     }
 }

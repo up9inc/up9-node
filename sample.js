@@ -2,7 +2,7 @@ const express = require("express");
 const axios = require("axios");
 const request = require("request");
 
-const up9Monitor = require("./index.js")({
+const up9Monitor = require("./lib")({
     "up9Server": "rami-dev.dev.testr.io",
     "serviceName": "test",
     "clientId": "xXsb6OS9o83307lhIGRO1nd1V46Vx5CZ",
