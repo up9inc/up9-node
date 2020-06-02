@@ -10,13 +10,16 @@ class UP9Monitor {
     private httpConnector: any;
     private ownState: any;
     private isDebug: boolean;
+    private blacklist: any;
+    private hostnameOverrides: any;
 
     constructor(options) {
         this.env = options.up9Server;
         this.serviceName = options.serviceName;
         this.tappingSourceId = "nodejs-" + this.serviceName;
         this.httpConnector = new UP9HttpConnector(this.env, options.clientId, options.clientSecret);
-        this.isDebug = options.isDebug;
+        this.isDebug = options.isDebug ?? false;
+        this.hostnameOverrides = options.hostnameOverrides ?? {};
         setInterval(this.poll, POLL_INTERVAL_MS);
 
         this.requestLogger(require("http"), "http");
@@ -28,6 +31,13 @@ class UP9Monitor {
             await this.httpConnector.postTappingSource(this.tappingSourceId);
             const state = await this.httpConnector.getTappingState();
             this.ownState = state.filter(s => s.id == this.tappingSourceId)[0];
+            if (this.ownState?.shouldTap && this.ownState.model) {
+                this.blacklist = await this.httpConnector.getModelBlacklist(this.ownState.model);
+            } else {
+                this.blacklist = [];
+            }
+            if (this.isDebug)
+                console.log(`blacklist = ${this.blacklist}`);
         } catch (e) {
             if (this.isDebug)
                 console.error("error polling", e);
@@ -36,14 +46,34 @@ class UP9Monitor {
 
     sendMessage = async (message) => {
         try {
-            if (this.ownState && this.ownState.shouldTap && this.ownState.model) {
-                await this.httpConnector.sendTrafficMessage(this.ownState.model, message);
+            if (this.ownState?.shouldTap && this.ownState.model) {
+                message = this.replaceOverridenUrlsInMessage(message);
+                if (!this.isRequestUrlBlacklisted(message.request.request_url))
+                    console.log('sending message');
+                    await this.httpConnector.sendTrafficMessage(this.ownState.model, message);
+                else if (this.isDebug)
+                    console.log(`ignoring blacklisted request to ${message.request.request_url}`);
             }
         } catch (e) {
             if (this.isDebug)
                 console.error("error sending message to dumper", e, message, this.ownState);
         }
 
+    }
+
+    private isRequestUrlBlacklisted = (url: string) => {
+        for (const blacklistRegex of this.blacklist ?? []) {
+            try {
+                console.log(`matching ${blacklistRegex} for ${url}`)
+                if (url.match(blacklistRegex))
+                    console.log('blacklist match');
+                    return true;
+            } catch (e) {
+                if (this.isDebug)
+                    console.error(`encountered bad blacklist regex: ${blacklistRegex}`, e);
+            }
+        }
+        return false;
     }
 
     express = () => {
@@ -69,7 +99,19 @@ class UP9Monitor {
         }
     }
 
-    processOutgoingMessage = (request, response, responseBody, protocol, startUnixTimestamp, requestDuration) => {
+    private replaceOverridenUrlsInMessage(message) {
+        const requestOverrideHostname = this.hostnameOverrides[message.request.hostname];
+        if (requestOverrideHostname) {
+            message.request.hostname = requestOverrideHostname;
+            const parsedUrl = new URL(message.request.request_url);
+            parsedUrl.hostname = requestOverrideHostname;
+            message.request.request_url = parsedUrl.href;
+        }
+        message.response.hostname = this.hostnameOverrides[message.response.hostname] ?? message.response.hostname;
+        return message;
+    }
+
+    private processOutgoingMessage = (request, response, responseBody, protocol, startUnixTimestamp, requestDuration) => {
         let url = "";
         if (request.protocol)
             url = `${request.protocol}//${request.hostname}${request.path}`;

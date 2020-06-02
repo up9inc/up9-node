@@ -48,7 +48,6 @@ export class UP9HttpConnector {
         this.tokenExpiresAt = (+ new Date()) + (tokenResponse.expires_in * 1000) - 10000;
     }
 
-
     sendTrafficMessage = async (modelId, message) => {
         const messageBody = {
             type: 'collector',
@@ -57,6 +56,11 @@ export class UP9HttpConnector {
         const response = await axios.post(`${this.trafficDumperUrl}/${modelId}`, messageBody, {headers: await this.getRequestHeader()});
         return response.data;
     };
+
+    getModelBlacklist = async (modelId) => {
+        const response = await axios.get(`${this.trccUrl}/models/${modelId}/blacklist`, {headers: await this.getRequestHeader()});
+        return response.data;
+    }
 
     getRequestHeader = async () => {
         if (this.token == null || this.tokenExpiresAt > (+ new Date())) {
