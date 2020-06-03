@@ -83,14 +83,19 @@ class UP9Monitor {
         httpModule.request = (request, callback) => {
             const startUnixTimestamp = + new Date();
             return original(request, (response) => {
-                let body = "";
-                response.on('readable', () => {
-                    body += response.read();
-                });
-                response.on('end', () => {
-                    const requestDuration = (+ new Date()) - startUnixTimestamp;
-                    this.processOutgoingMessage(request, response, body, protocol, startUnixTimestamp, requestDuration);
-                });
+                try {
+                    let body = "";
+                    response.on('readable', () => {
+                        body += response.read();
+                    });
+                    response.on('end', () => {
+                        const requestDuration = (+ new Date()) - startUnixTimestamp;
+                        this.processOutgoingMessage(request, response, body, protocol, startUnixTimestamp, requestDuration);
+                    });
+                } catch (e) {
+                    if (this.isDebug)
+                        console.error(`error while sending outbound request`, e);
+                }
                 if (callback)
                     callback(response);
             })
