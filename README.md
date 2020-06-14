@@ -1,4 +1,4 @@
-# up9-sdk
+# up9-node
 
 Traffic monitoring kit for use with UP9
 
@@ -7,13 +7,13 @@ Traffic monitoring kit for use with UP9
 Using npm:
 
 ```bash
-npm install up9-sdk
+npm install up9-node
 ```
 
 Using yarn:
 
 ```bash
-yarn add up9-sdk
+yarn add up9-node
 ```
 
 ## Usage
@@ -24,7 +24,7 @@ With Express:
 var express = require("express");
 var app = express();
 
-var up9Monitor = require("up9-sdk")({
+var up9Monitor = require("up9-node")({
     "up9Server": "up9.app",
     "serviceName": "your-service-name",
     "clientId": "your-client-id",
@@ -34,3 +34,5 @@ var up9Monitor = require("up9-sdk")({
 
 app.use(up9Monitor.express());
 ```
+
+A complete example app can be seen [here](https://github.com/RamiBerm/up9-node-example/)
