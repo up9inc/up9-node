@@ -1,6 +1,6 @@
 {
   "name": "up9-node",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
   "main": "lib/index.js",
   "dependencies": {
@@ -12,6 +12,11 @@
     "request": "^2.88.2",
     "typescript": "^3.9.3"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/testr-io/up9-node.git"
+  },
+  "homepage": "https://up9.com",
   "scripts": {
     "prepublish": "tsc"
   },
