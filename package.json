@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/testr-io/up9-node.git"
+    "url": "git+https://github.com/up9inc/up9-node.git"
   },
   "homepage": "https://up9.com",
   "scripts": {
