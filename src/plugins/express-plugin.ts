@@ -1,4 +1,4 @@
-import {lowerCaseObjectKeys} from "../utils";
+import {formatRequestHeaders} from "../utils";
 
 function getResponseHeaders(responseHeaderString) {
     let headers = {};
@@ -23,7 +23,7 @@ const extractUp9MessageFromExpress = (req, res, responseContents, serviceName, s
     resHeaders['duration_ms'] = requestDurationMs.toString();
     return {
             request: {
-                headers: lowerCaseObjectKeys(reqHeaders),
+                headers: formatRequestHeaders(reqHeaders),
                 body: {
                     "truncated": false,
                     "as_bytes": req.body ? Buffer.from(JSON.stringify(req.body)).toString('base64') : ""
@@ -33,7 +33,7 @@ const extractUp9MessageFromExpress = (req, res, responseContents, serviceName, s
                 started_at_unix: startUnixTimestamp / 1000
             },
             response: {
-                headers: lowerCaseObjectKeys(resHeaders),
+                headers: formatRequestHeaders(resHeaders),
                 body: {
                     "truncated": false,
                     "as_bytes": responseContents
