@@ -22,8 +22,8 @@ class UP9Monitor {
         this.hostnameOverrides = options.hostnameOverrides ?? {};
         setInterval(this.poll, POLL_INTERVAL_MS);
 
-        this.requestLogger(require("http"), "http");
-        this.requestLogger(require("https"), "https");
+        this.createTappedModule(require("http"), "http");
+        this.createTappedModule(require("https"), "https");
     }
 
     poll = async () => {
@@ -79,7 +79,7 @@ class UP9Monitor {
         return getExpressMiddleware(this.sendMessage, this.serviceName);
     }
 
-    requestLogger = (httpModule, protocol) => {
+    createTappedModule = (httpModule, protocol) => {
         httpModule.request = this.getHttpTappedFunc(httpModule.request, protocol);
         httpModule.get = this.getHttpTappedFunc(httpModule.get, protocol);
     }
