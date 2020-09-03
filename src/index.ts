@@ -1,5 +1,5 @@
 import {getExpressMiddleware} from "./plugins/express-plugin";
-import {lowerCaseObjectKeys} from "./utils";
+import {formatRequestHeaders} from "./utils";
 import {UP9HttpConnector} from "./http-connector";
 
 const POLL_INTERVAL_MS = 5000;
@@ -16,14 +16,14 @@ class UP9Monitor {
     constructor(options) {
         this.env = options.up9Server;
         this.serviceName = options.serviceName;
-        this.tappingSourceId = "nodejs-" + this.serviceName;
+        this.tappingSourceId = "nodejs-" + this.serviceName.replace(/\./g,'-'); //replace dots with dashes, TRCC does not like dots in tapping source ids;
         this.httpConnector = new UP9HttpConnector(this.env, options.clientId, options.clientSecret);
         this.isDebug = options.isDebug ?? false;
         this.hostnameOverrides = options.hostnameOverrides ?? {};
         setInterval(this.poll, POLL_INTERVAL_MS);
 
-        this.requestLogger(require("http"), "http");
-        this.requestLogger(require("https"), "https");
+        this.createTappedModule(require("http"), "http");
+        this.createTappedModule(require("https"), "https");
     }
 
     poll = async () => {
@@ -48,8 +48,9 @@ class UP9Monitor {
         try {
             if (this.ownState?.shouldTap && this.ownState.model) {
                 message = this.replaceOverridenUrlsInMessage(message);
-                if (!this.isRequestUrlBlacklisted(message.request.request_url))
+                if (!this.isRequestUrlBlacklisted(message.request.request_url)) {
                     await this.httpConnector.sendTrafficMessage(this.ownState.model, message);
+                }
                 else if (this.isDebug)
                     console.log(`ignoring blacklisted request to ${message.request.request_url}`);
             }
@@ -78,11 +79,15 @@ class UP9Monitor {
         return getExpressMiddleware(this.sendMessage, this.serviceName);
     }
 
-    requestLogger = (httpModule, protocol) => {
-        let original = httpModule.request
-        httpModule.request = (request, callback) => {
+    createTappedModule = (httpModule, protocol) => {
+        httpModule.request = this.getHttpTappedFunc(httpModule.request, protocol);
+        httpModule.get = this.getHttpTappedFunc(httpModule.get, protocol);
+    }
+
+    private getHttpTappedFunc = (originalModule, protocol) => {
+        return (request, callback) => {
             const startUnixTimestamp = + new Date();
-            return original(request, (response) => {
+            return originalModule(request, (response) => {
                 try {
                     let body = "";
                     response.on('readable', () => {
@@ -98,7 +103,7 @@ class UP9Monitor {
                 }
                 if (callback)
                     callback(response);
-            })
+            });
         }
     }
 
@@ -116,32 +121,37 @@ class UP9Monitor {
 
     private processOutgoingMessage = (request, response, responseBody, protocol, startUnixTimestamp, requestDuration) => {
         let url = "";
-        if (request.protocol)
+        if (typeof request == "string") {
+            url = request;
+        }
+        else if (request.protocol)
             url = `${request.protocol}//${request.hostname}${request.path}`;
         else {
             url = request.href;
         }
         if (url.indexOf(this.env) == -1) {
+            const urlParts = new URL(url);
             const requestHeaders = {...request.headers};
-            requestHeaders[':method'] = request.method;
-            requestHeaders[':path'] = request.path;
-            requestHeaders[':authority'] = request.hostname;
+            requestHeaders[':method'] = response.req.method;
+            requestHeaders[':path'] = urlParts.pathname;
+            requestHeaders[':authority'] = urlParts.hostname;
             requestHeaders[':scheme'] = protocol;
             requestHeaders['x-up9-destination'] = this.serviceName;
+            requestHeaders['host'] = urlParts.hostname;
             const requestBody = request.body;
             const message = {
                 request: {
-                    headers: lowerCaseObjectKeys(requestHeaders),
+                    headers: formatRequestHeaders(requestHeaders),
                     body: {
                         "truncated": false,
                         "as_bytes": requestBody ? Buffer.from(requestBody).toString('base64') : ""
                     },
                     request_url: url,
-                    hostname: request.hostname,
+                    hostname: urlParts.hostname,
                     started_at_unix: startUnixTimestamp / 1000
                 },
                 response: {
-                    headers: lowerCaseObjectKeys({...response.headers, ":status": response.statusCode.toString(), 'duration_ms': requestDuration.toString()}),
+                    headers: formatRequestHeaders({...response.headers, ":status": response.statusCode.toString(), 'duration_ms': requestDuration.toString()}),
                     body: {
                         "truncated": false,
                         "as_bytes": responseBody ? Buffer.from(responseBody).toString('base64') : ""
