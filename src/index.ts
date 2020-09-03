@@ -16,7 +16,7 @@ class UP9Monitor {
     constructor(options) {
         this.env = options.up9Server;
         this.serviceName = options.serviceName;
-        this.tappingSourceId = "nodejs-" + this.serviceName;
+        this.tappingSourceId = "nodejs-" + this.serviceName.replace(/\./g,'-'); //replace dots with dashes, TRCC does not like dots in tapping source ids;
         this.httpConnector = new UP9HttpConnector(this.env, options.clientId, options.clientSecret);
         this.isDebug = options.isDebug ?? false;
         this.hostnameOverrides = options.hostnameOverrides ?? {};
